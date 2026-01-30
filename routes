@@ -23,7 +23,7 @@ route.get('/files', async (req, res) => {
 });
 
 // Manual sync trigger
-route.get('/sync', async (req, res) => {
+route.get('/syncs', async (req, res) => {
   try {
     // Run sync in background
     syncRecordings()

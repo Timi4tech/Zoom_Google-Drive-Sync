@@ -92,13 +92,6 @@ async function syncRecordings() {
     }
   }
     const syncCompleted = new Date();
-    
-    console.log('\n===========================================');
-    console.log('✅ Sync completed successfully!');
-    console.log(`📊 New files uploaded: ${newCount}`);
-    console.log(`⊗ Duplicates skipped: ${duplicateCount}`);
-    console.log(`⏱️  Duration: ${((syncCompleted - syncStarted) / 1000).toFixed(2)}s`);
-    console.log('===========================================\n');
 
     // Log sync to database
     await logSync({
@@ -123,6 +116,13 @@ async function syncRecordings() {
       errors,
       status
     });
+  } finally{
+      console.log('\n===========================================');
+    console.log('✅ Sync completed successfully!');
+    console.log(`📊 New files uploaded: ${newCount}`);
+    console.log(`⊗ Duplicates skipped: ${duplicateCount}`);
+    console.log(`⏱️  Duration: ${((syncCompleted - syncStarted) / 1000).toFixed(2)}s`);
+    console.log('===========================================\n');
   }
 }
 

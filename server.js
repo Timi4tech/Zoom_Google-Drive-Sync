@@ -1,8 +1,10 @@
 const express = require('express');
+const cron = require('node-cron');
 const cors = require('cors');
 const csrf = require('csurf');
 const cookieParser = require('cookie-parser');
 require('dotenv').config();
+const { syncRecordings } = require('./middleware/duplicateAuth');
 const routes = require('./routes');
 const app = express();
 const  {createUserTable} = require('./db/schema');
@@ -37,13 +39,16 @@ app.use(csrfProtection);
 // Initialize DB schema
 createUserTable();
 // Schedule periodic sync
-
-
+const cronPattern = `*/${process.env.SYNC_INTERVAL_MINUTES} * * * *`;
+cron.schedule(cronPattern, () => {
+  console.log('⏰ Scheduled sync triggered');
+  syncRecordings();
+});
 app.use("/api", routes);
 
 // Run initial sync on startup
 console.log('🚀 Server starting...');
-
+syncRecordings();
 
  //404 handler
 app.use((req, res) => {
@@ -65,18 +70,3 @@ app.listen(PORT, () => {
 });
 
 //Graceful shutdown
-const shutdown = () => {
-  console.log('Shutting down gracefully...');
-  server.close(() => {
-    console.log('Server closed');
-    process.exit(0);
-  });
-  
-  setTimeout(() => {
-    console.error('Forced shutdown');
-    process.exit(1);
-  }, 10000);
-};
-
-process.on('SIGTERM', shutdown);
-process.on('SIGINT', shutdown);
