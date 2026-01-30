@@ -1,0 +1,16 @@
+services:
+  - type: web
+    name: zoom-drive-backend
+    runtime: node
+    buildCommand: npm install
+    startCommand: npm start
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 3001
+    
+databases:
+  - name: zoom-drive-db
+    databaseName: zoom_drive_sync
+    user: zoom_sync_user

@@ -1,0 +1,71 @@
+const express = require('express');
+
+const db = require('./db/pool');
+const { syncRecordings } = require('./middleware/duplicateAuth');
+const { oAuth2Client } = require('./middleware/googleOAuth');
+
+const route = express.Router();
+// Get all Drive files
+route.get('/files', async (req, res) => {
+  try {
+    const result = await db.query(
+      `SELECT drive_id as id, name, web_view_link as "driveLink", 
+              created_time as "createdAt", size, file_type as type, mime_type as "mimeType"
+       FROM drive_files 
+       ORDER BY created_time DESC 
+       LIMIT 100`
+    );
+    res.json(result.rows);
+  } catch (error) {
+    console.error('Error fetching files:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Manual sync trigger
+route.post('/sync', async (req, res) => {
+  try {
+    // Run sync in background
+    syncRecordings().catch(err => console.error('Background sync error:', err));
+    
+    res.json({ 
+      success: true, 
+      message: 'Sync started in background' 
+    });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Get sync stats
+route.get('/stats', async (req, res) => {
+  try {
+    const totalSynced = await db.query('SELECT COUNT(*) FROM synced_recordings');
+    const totalFiles = await db.query('SELECT COUNT(*) FROM drive_files');
+    const lastSync = await db.query(
+      'SELECT sync_completed_at, new_recordings_count, duplicates_skipped_count FROM sync_logs ORDER BY sync_completed_at DESC LIMIT 1'
+    );
+
+    res.json({
+      totalSynced: parseInt(totalSynced.rows[0].count),
+      totalFiles: parseInt(totalFiles.rows[0].count),
+      lastSync: lastSync.rows[0] || null
+    });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+route.get('/oauth2callback', async (req, res) => {
+  const { code } = req.query;
+
+  const { tokens } = await oAuth2Client.getToken(code);
+  oAuth2Client.setCredentials(tokens);
+
+  console.log('REFRESH TOKEN:', tokens.refresh_token);
+
+  res.send('Authorization successful. You can close this tab.');
+});
+
+
+module.exports = route;
