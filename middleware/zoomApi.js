@@ -1,7 +1,12 @@
-
 const axios = require('axios');
 const dotenv = require('dotenv');
+const qs = require('querystring');
+const fs = require('fs');
+const path = require('path');
+const os = require('os');
+
 dotenv.config();
+
 async function getZoomToken() {
   try {
     const credentials = Buffer.from(
@@ -10,18 +15,16 @@ async function getZoomToken() {
 
     const response = await axios.post(
       `https://zoom.us/oauth/token`,
-       // 👈 no body for this request
-      
-        {
-          grant_type: 'account_credentials',
-          account_id: process.env.ZOOM_ACCOUNT_ID,
-        },
-
-        {headers: {
+      qs.stringify({ 
+        grant_type: 'account_credentials',
+        account_id: process.env.ZOOM_ACCOUNT_ID,
+      }),
+      {
+        headers: {
           Authorization: `Basic ${credentials}`,
           'Content-Type': 'application/x-www-form-urlencoded',
         },
-    }
+      }
     );
 
     return response.data.access_token;
@@ -38,8 +41,8 @@ async function fetchZoomRecordings() {
   try {
     const token = await getZoomToken();
 
-    // last 30 days (Zoom expects YYYY-MM-DD)
-    const fromDate = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000)
+    // last 2 days (Zoom expects YYYY-MM-DD)
+    const fromDate = new Date(Date.now() - 12 * 24 * 60 * 60 * 1000)
       .toISOString()
       .split('T')[0];
 
@@ -47,7 +50,7 @@ async function fetchZoomRecordings() {
       'https://api.zoom.us/v2/users/me/recordings',
       {
         params: {
-          page_size: 2,
+          page_size: 4,
           from: fromDate,
         },
         headers: {
@@ -55,7 +58,7 @@ async function fetchZoomRecordings() {
         },
       }
     );
-
+  console.log(`✓ Fetched ${response.data.meetings.length} recordings from Zoom`);
     return response.data.meetings ?? [];
   } catch (error) {
     console.error(
@@ -66,19 +69,36 @@ async function fetchZoomRecordings() {
   }
 }
 
+/**
+ * Download from Zoom and save to temporary file
+ * This prevents stream timeout issues with Google Drive
+ */
 async function downloadFromZoom(downloadUrl, token, fileName = 'file') {
   try {
     console.log(`📥 Starting download: ${fileName}`);
     
+    // Create temp directory if it doesn't exist
+    const tempDir = path.join(os.tmpdir(), 'zoom-recordings');
+    if (!fs.existsSync(tempDir)) {
+      fs.mkdirSync(tempDir, { recursive: true });
+    }
+    
+    // Create temp file path
+    const tempFilePath = path.join(tempDir, `${Date.now()}-${fileName}`);
+    
     const response = await axios.get(downloadUrl, {
       headers: { 'Authorization': `Bearer ${token}` },
       responseType: 'stream',
+      timeout: 300000, // 5 minute timeout
     });
 
     const totalBytes = parseInt(response.headers['content-length'], 10);
     let downloadedBytes = 0;
+    
+    // Create write stream to temp file
+    const writer = fs.createWriteStream(tempFilePath);
 
-    // Add progress tracking to the stream
+    // Track progress
     response.data.on('data', (chunk) => {
       downloadedBytes += chunk.length;
       if (totalBytes) {
@@ -89,18 +109,46 @@ async function downloadFromZoom(downloadUrl, token, fileName = 'file') {
       }
     });
 
-    response.data.on('end', () => {
-      console.log('\n✅ Download complete');
+    // Pipe to file
+    response.data.pipe(writer);
+
+    // Wait for download to complete
+    await new Promise((resolve, reject) => {
+      writer.on('finish', () => {
+        console.log('\n✅ Download complete');
+        resolve();
+      });
+      writer.on('error', reject);
+      response.data.on('error', reject);
     });
 
-    return { stream: response.data, size: totalBytes };
+    return { 
+      filePath: tempFilePath, 
+      size: totalBytes 
+    };
   } catch (error) {
     console.error('\n❌ Error downloading from Zoom:', error.message);
     throw error;
   }
 }
+
+/**
+ * Clean up temporary file
+ */
+function cleanupTempFile(filePath) {
+  try {
+    if (fs.existsSync(filePath)) {
+      fs.unlinkSync(filePath);
+      console.log(`🗑️  Cleaned up temp file: ${path.basename(filePath)}`);
+    }
+  } catch (error) {
+    console.error(`Warning: Could not delete temp file ${filePath}:`, error.message);
+  }
+}
+
 module.exports = {
   getZoomToken,
   fetchZoomRecordings,
-  downloadFromZoom
+  downloadFromZoom,
+  cleanupTempFile
 };
