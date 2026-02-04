@@ -37,28 +37,22 @@ async function syncRecordings() {
 
     for (const recording of recordings) {
       // CHECK FOR DUPLICATE RECORDING
-      if (syncedRecordingsSet.has(recording.uuid)) {
-        console.log(`❌ SKIPPED (duplicate): ${recording.topic}`);
-        duplicateCount++;
-        continue; // Skip to next recording
-      }
+      const key = `${recording.uuid}:${recording.topic}:${recording.start_time}`;
+      const found = [...syncedRecordingsSet].find(k => k===recording.uuid);
+      console.log(found)
+if (found) {
+  console.log(`❌ SKIPPED (duplicate): ${recording.topic}`);
+  duplicateCount++;
+  continue;
+}
+     
 
       // Process NEW recording
       console.log(`\n📹 Processing NEW: ${recording.topic}`);
       let uploadedAnyFile = false;
 
       // 🔧 CRITICAL: Register recording FIRST
-      try {
-        await markRecordingAsSynced(recording);
-        syncedRecordingsSet.add(recording.uuid);
-        console.log(`  ✓ Recording registered in database`);
-      } catch (dbError) {
-        console.error(`  ✗ Failed to register recording:`, dbError.message);
-        errors = dbError.message;
-        status = 'partial';
-        continue; // Skip this recording
-      }
-
+      
       // Process each file in the recording
       for (const file of recording.recording_files) {
         // Declare variables for this file
@@ -115,10 +109,17 @@ async function syncRecordings() {
           }
         }
       }
-
+         
       // Summary for this recording
-      if (!uploadedAnyFile) {
-        console.warn(`  ⚠️ No files uploaded for: ${recording.topic}`);
+      if (uploadedAnyFile) {
+          await markRecordingAsSynced(recording);
+        syncedRecordingsSet.add(recording.uuid);
+        console.log(`  ✓ Recording registered in database`);
+      } else {
+        console.error(`  ✗ Failed to register recording:`, dbError.message);
+        errors = dbError.message;
+        status = 'partial';
+        continue; 
       }
     }
     

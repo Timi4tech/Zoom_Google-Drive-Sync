@@ -42,7 +42,7 @@ async function fetchZoomRecordings() {
     const token = await getZoomToken();
 
     // last 2 days (Zoom expects YYYY-MM-DD)
-    const fromDate = new Date(Date.now() - 12 * 24 * 60 * 60 * 1000)
+    const fromDate = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000)
       .toISOString()
       .split('T')[0];
 
@@ -89,7 +89,6 @@ async function downloadFromZoom(downloadUrl, token, fileName = 'file') {
     const response = await axios.get(downloadUrl, {
       headers: { 'Authorization': `Bearer ${token}` },
       responseType: 'stream',
-      timeout: 300000, // 5 minute timeout
     });
 
     const totalBytes = parseInt(response.headers['content-length'], 10);

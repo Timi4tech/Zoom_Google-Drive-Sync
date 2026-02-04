@@ -17,4 +17,21 @@ const drive = google.drive({
   auth: oAuth2Client,
 });
 
-module.exports = {drive, oAuth2Client };
+async function ensureFreshAccessToken() {
+  const { token } = await oAuth2Client.getAccessToken();
+
+  if (!token) {
+    throw new Error('Failed to acquire access token');
+  }
+
+  // Optional: log expiry for sanity
+  const expiry = oAuth2Client.credentials.expiry_date;
+  console.log(
+    '🔐 Google token expires at:',
+    expiry ? new Date(expiry).toISOString() : 'unknown'
+  );
+}
+
+
+module.exports = {drive, oAuth2Client, ensureFreshAccessToken};
+
