@@ -154,7 +154,9 @@ async function uploadLargeFileToGoogleDrive(
     offset += chunkSize;
 
     const progress = ((offset / fileSize) * 100).toFixed(1);
-    process.stdout.write(`\r📤 Uploading: ${progress}%`);
+    if (progress == 100) {
+      console.log(`  ⬆️  Uploaded ${progress}% (${offset}/${fileSize} bytes)`);
+    }
   }
 
   fs.closeSync(fd);
