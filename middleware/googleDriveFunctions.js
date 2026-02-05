@@ -2,7 +2,6 @@
 const { drive } = require('./googleOAuth');
 const dotenv = require('dotenv');
 const fs = require('fs');
-const ensureFreshAccessToken = require('./googleOAuth')
 dotenv.config();
 
 /**
@@ -18,7 +17,6 @@ async function uploadToGoogleDrive(
   const maxRetries = 3;
   let lastError;
 
-  await ensureFreshAccessToken();
 
   for (let attempt = 1; attempt <= maxRetries; attempt++) {
     try {
