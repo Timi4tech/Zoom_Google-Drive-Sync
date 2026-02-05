@@ -116,8 +116,7 @@ if (found) {
         syncedRecordingsSet.add(recording.uuid);
         console.log(`  ✓ Recording registered in database`);
       } else {
-        console.error(`  ✗ Failed to register recording:`, dbError.message);
-        errors = dbError.message;
+        console.error(`  ✗ Failed to register recording:`);
         status = 'partial';
         continue; 
       }
