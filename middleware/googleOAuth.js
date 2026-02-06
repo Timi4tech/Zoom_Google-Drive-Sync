@@ -17,7 +17,7 @@ const drive = google.drive({
   auth: oAuth2Client,
 });
 
-async function ensureFreshAccessToken() {
+/*async function ensureFreshAccessToken() {
   const { token } = await oAuth2Client.getAccessToken();
 
   if (!token) {
@@ -31,7 +31,8 @@ async function ensureFreshAccessToken() {
     expiry ? new Date(expiry).toISOString() : 'unknown'
   );
 }
+  */
 
 
-module.exports = {drive, oAuth2Client, ensureFreshAccessToken};
+module.exports = {drive, oAuth2Client};
 
