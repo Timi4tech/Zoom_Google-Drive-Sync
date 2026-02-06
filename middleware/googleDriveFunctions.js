@@ -102,7 +102,7 @@ async function uploadLargeFileToGoogleDrive(
     throw new Error('GOOGLE_DRIVE_FOLDER_ID not set');
   }
 
-  await ensureFreshAccessToken();
+  
 
   console.log(`📤 Starting resumable upload: ${fileName}`);
 
